@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnyVidSave Clone - Free Video Downloader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between">
+
+    <!-- Navbar -->
+    <header class="border-b border-slate-800 p-4 text-center">
+        <h1 class="text-2xl font-bold tracking-tight text-indigo-400">Any<span class="text-white">VidSave</span></h1>
+        <p class="text-xs text-slate-400">Download videos from YouTube, TikTok, Instagram & more</p>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-xl w-full mx-auto p-4 flex-grow flex flex-col justify-center">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+            <h2 class="text-lg font-semibold mb-2">Paste Link Below</h2>
+            
+            <!-- Input Form -->
+            <div class="flex flex-col gap-3">
+                <input type="url" id="urlInput" placeholder="https://www.instagram.com/reel/..." 
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
+                <button onclick="extractMedia()" id="extractBtn"
+                    class="w-full bg-indigo-600 hover:bg-indigo-500 transition font-medium py-3 rounded-xl text-sm shadow-lg shadow-indigo-600/20">
+                    Extract Media
+                </button>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loader" class="hidden mt-6 text-center text-slate-400 text-sm animate-pulse">
+                Connecting to server and processing link...
+            </div>
+
+            <!-- Result Box -->
+            <div id="resultContainer" class="hidden mt-6 border-t border-slate-800 pt-6">
+                <div class="flex gap-4 items-center mb-4">
+                    <img id="mediaThumb" src="" alt="Thumbnail" class="w-24 h-24 object-cover rounded-lg border border-slate-700">
+                    <div>
+                        <h3 id="mediaTitle" class="text-sm font-semibold line-clamp-2"></h3>
+                        <span id="mediaPlatform" class="inline-block mt-1 px-2 py-0.5 bg-slate-800 text-xs text-indigo-400 rounded-md"></span>
+                    </div>
+                </div>
+
+                <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Available Downloads</h4>
+                <div id="formatList" class="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1">
+                    <!-- Dynamic links injected here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center p-4 text-xs text-slate-600 border-t border-slate-900">
+        &copy; 2026 AnyVidSave Clone. Built for educational and personal utility.
+    </footer>
+
+    <script>
+        async function extractMedia() {
+            const url = document.getElementById('urlInput').value;
+            const loader = document.getElementById('loader');
+            const resultContainer = document.getElementById('resultContainer');
+            const extractBtn = document.getElementById('extractBtn');
+            const formatList = document.getElementById('formatList');
+
+            if (!url) {
+                alert('Please enter a URL first.');
+                return;
+            }
+
+            loader.classList.remove('hidden');
+            resultContainer.classList.add('hidden');
+            extractBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/extract', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('mediaTitle').innerText = data.title;
+                    document.getElementById('mediaThumb').src = data.thumbnail || 'https://via.placeholder.com/150';
+                    document.getElementById('mediaPlatform').innerText = data.platform.toUpperCase();
+
+                    formatList.innerHTML = '';
+                    
+                    // Display top format options
+                    data.formats.slice(0, 6).forEach(format => {
+                        const item = document.createElement('div');
+                        item.className = "flex justify-between items-center bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs";
+                        item.innerHTML = `
+                            <div>
+                                <span class="font-semibold text-indigo-300">${format.ext.toUpperCase()}</span> - 
+                                <span>${format.resolution}</span> 
+                                <span class="text-slate-500">(${format.filesize})</span>
+                            </div>
+                            <a href="${format.url}" target="_blank" download 
+                                class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg font-medium transition">
+                                Download
+                            </a>
+                        `;
+                        formatList.appendChild(item);
+                    });
+
+                    resultContainer.classList.remove('hidden');
+                } else {
+                    alert(data.error || 'Failed to process link.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('An error occurred while connecting to the server.');
+            } finally {
+                loader.classList.add('hidden');
+                extractBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
